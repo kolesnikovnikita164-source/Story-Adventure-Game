@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Leo-Lukas – Der ungewöhnliche Schultag</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    font-family: Georgia, serif;
+    background:
+        linear-gradient(rgba(10,15,25,.78), rgba(10,15,25,.9)),
+        url("https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=80")
+        center/cover fixed;
+    color: #f5f1e8;
+    min-height: 100vh;
+    touch-action: manipulation;
+}
+
+.game {
+    max-width: 950px;
+    margin: auto;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    padding: 20px 10px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: clamp(28px, 7vw, 55px);
+    color: #e8c77a;
+    text-shadow: 0 3px 15px #000;
+}
+
+header p {
+    color: #bbb;
+}
+
+.status {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: rgba(20,25,35,.85);
+    border: 1px solid #555;
+    border-radius: 15px;
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+.stat {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+}
+
+.stat span {
+    display: block;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.stat strong {
+    font-size: 20px;
+    color: #e8c77a;
+}
+
+.story-box {
+    background: rgba(15,18,25,.94);
+    border: 1px solid #666;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 15px 40px rgba(0,0,0,.5);
+}
+
+.scene-title {
+    color: #e8c77a;
+    font-size: 28px;
+    margin-top: 0;
+}
+
+.story {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #eee;
+}
+
+.story em {
+    color: #b7d7ff;
+}
+
+.choices {
+    display: grid;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+button {
+    width: 100%;
+    border: none;
+    border-radius: 13px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #e8c77a;
+    color: #171717;
+    transition: transform .15s, background .15s;
+    touch-action: manipulation;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    background: #f4d995;
+}
+
+button:active {
+    transform: scale(.98);
+}
+
+.secondary {
+    background: #343b48;
+    color: white;
+}
+
+.secondary:hover {
+    background: #465061;
+}
+
+.inventory {
+    margin-top: 20px;
+    background: rgba(20,25,35,.9);
+    border-radius: 15px;
+    padding: 15px;
+}
+
+.inventory h3 {
+    margin-top: 0;
+    color: #e8c77a;
+}
+
+#log {
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 14px;
+    color: #aaa;
+}
+
+.log-entry {
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+#ending {
+    text-align: center;
+    padding: 30px;
+}
+
+.hidden {
+    display: none;
+}
+
+.fade {
+    animation: fade .35s ease;
+}
+
+@keyframes fade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media(max-width:600px) {
+    .game {
+        padding: 10px;
+    }
+
+    .story-box {
+        padding: 18px;
+    }
+
+    .story {
+        font-size: 16px;
+    }
+
+    .status {
+        padding: 8px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<header>
+    <h1>Leo-Lukas</h1>
+    <p>Der ungewöhnliche Schultag</p>
+</header>
+
+<div class="status">
+    <div class="stat">
+        <span>Uhrzeit</span>
+        <strong id="time">06:00</strong>
+    </div>
+
+    <div class="stat">
+        <span>Motivation</span>
+        <strong id="motivation">50</strong>
+    </div>
+
+    <div class="stat">
+        <span>Neugier</span>
+        <strong id="curiosity">10</strong>
+    </div>
+
+    <div class="stat">
+        <span>Entdeckungen</span>
+        <strong id="discoveries">0</strong>
+    </div>
+</div>
+
+<div class="story-box fade" id="gameBox">
+
+    <h2 class="scene-title" id="sceneTitle"></h2>
+
+    <div class="story" id="story"></div>
+
+    <div class="choices" id="choices"></div>
+
+</div>
+
+<div class="inventory">
+    <h3>📖 Erinnerungen</h3>
+    <div id="log"></div>
+</div>
+
+</div>
+
+<script>
+
+let game = {
+    time: 6 * 60,
+    motivation: 50,
+    curiosity: 10,
+    discoveries: 0,
+    scene: "bed"
+};
+
+const scenes = {
+
+bed: {
+    title: "06:00 Uhr – Der Wecker",
+    text: `
+    Das schrille Klingeln des Weckers durchschneidet Leos Traum.
+
+    Vierzehn Jahre alt, voller Fantasie und mit absolut keiner Lust auf Schule
+    liegt Leo-Lukas in seinem Bett.
+
+    Er zieht die Decke über den Kopf.
+
+    <br><br>
+
+    Aus dem Treppenhaus ertönt die Stimme seiner Mutter:
+
+    <br><br>
+
+    <em>„Leo, steh auf! Du verpasst noch den Bus!“</em>
+    `,
+    choices: [
+        {
+            text: "😴 Die Decke über den Kopf ziehen",
+            next: "sleep"
+        },
+        {
+            text: "⏰ Sofort aufstehen",
+            next: "getup"
+        },
+        {
+            text: "🤔 Noch fünf Minuten nachdenken",
+            next: "think"
+        }
+    ]
+},
+
+sleep: {
+    title: "06:05 Uhr – Die große Flucht",
+    text: `
+    Leo beschließt, dass Schule heute einfach nicht existiert.
+
+    Zumindest in seiner Welt.
+
+    Er zieht die Decke noch höher.
+
+    Für einen kurzen Moment stellt er sich vor, wie er einfach aus dem
+    Fenster klettert und eine Weltreise beginnt.
+
+    Dann hört er erneut:
+
+    <br><br>
+
+    <em>„Leo!“</em>
+
+    <br><br>
+
+    Die Realität gewinnt.
+    `,
+    choices: [
+        {
+            text: "😂 Aufstehen",
+            next: "getup",
+            effect: { motivation: -3 }
+        },
+        {
+            text: "🛏️ Noch länger liegen bleiben",
+            next: "late",
+            effect: { motivation: -10 }
+        }
+    ]
+},
+
+think: {
+    title: "06:04 Uhr – Der Gedanke",
+    text: `
+    Leo starrt an die Zimmerdecke.
+
+    Warum muss jeder Morgen gleich sein?
+
+    Aufstehen. Schule. Hausaufgaben. Schlafen.
+
+    Doch irgendwo in ihm gibt es dieses Gefühl, dass heute vielleicht
+    etwas anders sein könnte.
+
+    Eine kleine Flamme der Neugier beginnt zu brennen.
+    `,
+    choices: [
+        {
+            text: "🔥 Dieser Tag könnte interessant werden",
+            next: "getup",
+            effect: { curiosity: 8 }
+        },
+        {
+            text: "🙄 Nein. Es wird garantiert langweilig",
+            next: "getup",
+            effect: { motivation: -5 }
+        }
+    ]
+},
+
+getup: {
+    title: "06:10 Uhr – Morgenroutine",
+    text: `
+    Leo schlägt die Decke zurück.
+
+    Die kalte Morgenluft trifft ihn.
+
+    Zähneputzen. Anziehen. Rucksack packen.
+
+    Die Schulbücher fühlen sich an wie Steine.
+
+    Schließlich nimmt Leo seinen Rucksack und geht nach unten.
+    `,
+    choices: [
+        {
+            text: "🥣 Schnell frühstücken",
+            next: "breakfast",
+            effect: { motivation: 5 }
+        },
+        {
+            text: "🎒 Direkt zur Bushaltestelle",
+            next: "street"
+        }
+    ]
+},
+
+late: {
+    title: "06:20 Uhr – Zu spät!",
+    text: `
+    Leo springt plötzlich aus dem Bett.
+
+    Der Bus kommt bald!
+
+    Er zieht sich so schnell an, dass sein Pullover fast falsch herum sitzt.
+
+    Mit dem Rucksack in der Hand rennt er die Treppe hinunter.
+    `,
+    choices: [
+        {
+            text: "🏃 Zur Bushaltestelle rennen",
+            next: "street",
+            effect: { motivation: -5 }
+        }
+    ]
+},
+
+breakfast: {
+    title: "06:20 Uhr – Küche",
+    text: `
+    In der Küche stehen Frühstück und eine dampfende Tasse.
+
+    Seine Mutter sieht ihn an.
+
+    <br><br>
+
+    <em>„Na? Bereit für die Schule?“</em>
+
+    <br><br>
+
+    Leo überlegt kurz, was er antworten soll.
+    `,
+    choices: [
+        {
+            text: "🙂 „Klar.“",
+            next: "street",
+            effect: { motivation: 5 }
+        },
+        {
+            text: "😐 „Nicht wirklich.“",
+            next: "street",
+            effect: { curiosity: 3 }
+        }
+    ]
+},
+
+street: {
+    title: "06:40 Uhr – Der Weg zur Bushaltestelle",
+    text: `
+    Die Haustür fällt hinter Leo ins Schloss.
+
+    Kalter Herbstwind schlägt ihm entgegen.
+
+    Bunte Ahornblätter liegen auf dem feuchten Asphalt.
+
+    Dann sieht Leo etwas.
+
+    Einen Raben.
+
+    Der Vogel gleitet völlig frei über die Dächer.
+    `,
+    choices: [
+        {
+            text: "🐦 Den Raben beobachten",
+            next: "raven",
+            effect: {
+                curiosity: 10,
+                discoveries: 1
+            }
+        },
+        {
+            text: "🚌 Weiter zur Bushaltestelle",
+            next: "bus"
+        }
+    ]
+},
+
+raven: {
+    title: "06:43 Uhr – Der Rabe",
+    text: `
+    Leo bleibt stehen.
+
+    Der Rabe kreist über ihm.
+
+    Für einen Augenblick fühlt sich die Stadt vollkommen still an.
+
+    <br><br>
+
+    <em>„Warum kann ich nicht einfach da oben sein?“</em>
+
+    <br><br>
+
+    Der Rabe dreht plötzlich in Richtung Wald.
+
+    Irgendetwas daran kommt Leo merkwürdig vor.
+    `,
+    choices: [
+        {
+            text: "👀 Dem Raben mit den Augen folgen",
+            next: "bus",
+            effect: { curiosity: 10 }
+        },
+        {
+            text: "🚌 Nicht weiter darüber nachdenken",
+            next: "bus"
+        }
+    ]
+},
+
+bus: {
+    title: "06:50 Uhr – Der Schulbus",
+    text: `
+    Die Scheinwerfer des gelben Schulbusses tauchen aus dem Nebel auf.
+
+    Die Türen öffnen sich mit einem Zischen.
+
+    Leo steigt ein.
+
+    Müde Gesichter.
+
+    Stille.
+
+    Er geht zu seinem Stammplatz hinten am Fenster.
+    `,
+    choices: [
+        {
+            text: "🪟 Aus dem Fenster schauen",
+            next: "window"
+        },
+        {
+            text: "😴 Augen schließen",
+            next: "sleepbus"
+        }
+    ]
+},
+
+sleepbus: {
+    title: "07:00 Uhr – Im Bus",
+    text: `
+    Leo lehnt den Kopf gegen die Scheibe.
+
+    Der Bus fährt durch die verschlafene Stadt.
+
+    Vielleicht wird dieser Tag doch ganz normal.
+
+    Vielleicht.
+    `,
+    choices: [
+        {
+            text: "➡️ Weiterfahren",
+            next: "school"
+        }
+    ]
+},
+
+window: {
+    title: "07:00 Uhr – Die Welt draußen",
+    text: `
+    Leo drückt seine Stirn gegen das kalte Fenster.
+
+    Häuser verschwinden im Nebel.
+
+    Bäume ziehen vorbei.
+
+    Doch plötzlich sieht Leo etwas zwischen den Bäumen.
+
+    Einen schwachen Lichtschein.
+
+    Er blinkt nur einmal.
+
+    Dann ist er verschwunden.
+    `,
+    choices: [
+        {
+            text: "🔎 Merken, wo das Licht war",
+            next: "school",
+            effect: {
+                curiosity: 15,
+                discoveries: 1
+            }
+        },
+        {
+            text: "🤷 Wahrscheinlich nur eine Lampe",
+            next: "school"
+        }
+    ]
+},
+
+school: {
+    title: "07:35 Uhr – Die Schule",
+    text: `
+    Der Bus hält vor dem grauen Schulgebäude.
+
+    Leo steigt aus.
+
+    Vor ihm liegen Unterricht, Mathearbeit und ein langer Tag.
+
+    Doch irgendwo tief in ihm brennt inzwischen etwas stärker:
+
+    Neugier.
+
+    Vielleicht ist heute tatsächlich nicht alles so normal,
+    wie es aussieht.
+    `,
+    choices: [
+        {
+            text: "🏫 Die Schule betreten",
+            next: "end"
+        },
+        {
+            text: "👀 Noch einmal zum Wald schauen",
+            next: "forest",
+            effect: { curiosity: 10 }
+        }
+    ]
+},
+
+forest: {
+    title: "07:36 Uhr – Der Wald",
+    text: `
+    Leo dreht sich um.
+
+    Zwischen den Nebelschwaden liegt der Wald.
+
+    Irgendwo dort war das geheimnisvolle Licht.
+
+    Der Bus fährt davon.
+
+    Leo weiß:
+
+    Er muss zur Schule.
+
+    Aber vielleicht wartet nach der Schule etwas im Wald.
+    `,
+    choices: [
+        {
+            text: "🏫 Zur Schule gehen",
+            next: "end"
+        }
+    ]
+},
+
+end: {
+    title: "13:00 Uhr – Der Schulgong",
+    text: `
+    Der Gong ertönt.
+
+    Leo packt seine Sachen.
+
+    Der normale Schultag ist vorbei.
+
+    Doch jetzt beginnt vielleicht das eigentliche Abenteuer.
+
+    <br><br>
+
+    Deine Entscheidungen haben Leos Neugier verändert.
+
+    <br><br>
+
+    <strong>
+    ${getEndingText()}
+    </strong>
+    `,
+    choices: [
+        {
+            text: "🔄 Geschichte neu starten",
+            next: "restart"
+        }
+    ]
+},
+
+restart: {
+    title: "Neuer Tag",
+    text: `
+    Der Wecker klingelt erneut.
+
+    06:00 Uhr.
+
+    Leo öffnet die Augen.
+
+    Diesmal könnte alles anders laufen.
+    `,
+    choices: [
+        {
+            text: "▶️ Neues Spiel starten",
+            next: "bed"
+        }
+    ]
+}
+
+};
+
+function getEndingText() {
+
+    if (game.discoveries >= 3) {
+        return "Leo hat an diesem Morgen mehrere Hinweise entdeckt. Irgendetwas stimmt mit dem Wald nicht...";
+    }
+
+    if (game.curiosity >= 30) {
+        return "Leo ist neugieriger denn je. Er nimmt sich vor, nach der Schule herauszufinden, was es mit dem Licht auf sich hat.";
+    }
+
+    if (game.motivation <= 30) {
+        return "Leo ist erschöpft, aber er hat den Tag geschafft. Vielleicht wird morgen besser.";
+    }
+
+    return "Leo hat den Schultag überstanden. Doch tief in ihm fragt er sich, ob morgen etwas Unerwartetes passieren wird.";
+}
+
+function applyEffect(effect) {
+
+    if (!effect) return;
+
+    if (effect.motivation) {
+        game.motivation += effect.motivation;
+    }
+
+    if (effect.curiosity) {
+        game.curiosity += effect.curiosity;
+    }
+
+    if (effect.discoveries) {
+        game.discoveries += effect.discoveries;
+    }
+
+    game.motivation = Math.max(0, Math.min(100, game.motivation));
+    game.curiosity = Math.max(0, Math.min(100, game.curiosity));
+}
+
+function addLog(text) {
+
+    const log = document.getElementById("log");
+
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    entry.textContent = text;
+
+    log.prepend(entry);
+}
+
+function updateStatus() {
+
+    let hours = Math.floor(game.time / 60);
+    let minutes = game.time % 60;
+
+    document.getElementById("time").textContent =
+        String(hours).padStart(2, "0") +
+        ":" +
+        String(minutes).padStart(2, "0");
+
+    document.getElementById("motivation").textContent =
+        game.motivation;
+
+    document.getElementById("curiosity").textContent =
+        game.curiosity;
+
+    document.getElementById("discoveries").textContent =
+        game.discoveries;
+}
+
+function showScene(sceneName) {
+
+    if (sceneName === "restart") {
+
+        game = {
+            time: 6 * 60,
+            motivation: 50,
+            curiosity: 10,
+            discoveries: 0,
+            scene: "bed"
+        };
+
+        document.getElementById("log").innerHTML = "";
+
+        sceneName = "bed";
+    }
+
+    game.scene = sceneName;
+
+    const scene = scenes[sceneName];
+
+    if (!scene) return;
+
+    document.getElementById("sceneTitle").textContent =
+        scene.title;
+
+    document.getElementById("story").innerHTML =
+        scene.text;
+
+    const choices =
+        document.getElementById("choices");
+
+    choices.innerHTML = "";
+
+    scene.choices.forEach(choice => {
+
+        const button = document.createElement("button");
+
+        button.textContent = choice.text;
+
+        if (choice.text.includes("neu starten")) {
+            button.className = "secondary";
+        }
+
+        button.onclick = () => {
+
+            applyEffect(choice.effect);
+
+            if (choice.effect) {
+
+                if (choice.effect.curiosity) {
+                    addLog("🔍 Neugier verändert");
+                }
+
+                if (choice.effect.discoveries) {
+                    addLog("✨ Neue Entdeckung gemacht");
+                }
+
+                if (choice.effect.motivation) {
+                    addLog("💭 Motivation verändert");
+                }
+            }
+
+            game.time += 5;
+
+            updateStatus();
+
+            showScene(choice.next);
+        };
+
+        choices.appendChild(button);
+    });
+
+    updateStatus();
+
+    const box = document.getElementById("gameBox");
+
+    box.classList.remove("fade");
+
+    void box.offsetWidth;
+
+    box.classList.add("fade");
+}
+
+showScene("bed");
+
+</script>
+
+</body>
+</html>
